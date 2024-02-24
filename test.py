@@ -3,11 +3,13 @@ from random import choice
 
 
 class Game:
-    def __init__(self) -> None:
+    def __init__(self, is_silent=False) -> None:
         self.game = 1
         self.player_1 = Player(image='x', is_auto=True)
-        self.player_2 = Player(image='o', is_auto=True)
+        self.player_2 = Player(image='o', is_auto=True, is_center=True, is_predict=True)
         self.field = Field()
+        self.winner = None
+        self.is_silent = is_silent
 
     def get_winner(self) -> str:
         #  горизонтали
@@ -30,10 +32,12 @@ class Game:
         turn = 0
 
         while self.game:
-            self.field.draw()
+            if not self.is_silent:
+                self.field.draw()
             if turn > 8:
-                print('игра окончена - ничья')
-                self.game == 0
+                if not self.is_silent:
+                    print('игра окончена - ничья')
+                    self.game == 0
                 break
             elif turn % 2:
                 self.player_2.make_turn(self.field)
@@ -41,12 +45,13 @@ class Game:
                 self.player_1.make_turn(self.field)
             turn += 1
 
-            winner = self.get_winner()
-            if winner:
-                self.field.draw()
-                print(f'{winner} победил')
+            self.winner = self.get_winner()
+            if self.winner:
+                if not self.is_silent:
+                    self.field.draw()
+                    print(f'{self.winner} победил')
                 self.game = 0
-        self.restart()
+        #  self.restart()
 
     def restart(self):
         print()
@@ -81,19 +86,26 @@ class Field:
 
 class App:
     def __init__(self) -> None:
-        self.game = Game()
-        self.game.run()
+        self.stat = [0, 0, 0]  # x o ничья
+        for i in range(1000):
+            self.game = Game(is_silent=True)
+            self.game.run()
 
-
-class Cell:
-    def __init__(self) -> None:
-        pass
+            if self.game.winner == 'x':
+                self.stat[0] += 1
+            elif self.game.winner == 'o':
+                self.stat[1] += 1
+            else:
+                self.stat[2] += 1
+        print(*self.stat)
 
 
 class Player:
-    def __init__(self, is_auto=False, image=None) -> None:
+    def __init__(self, is_auto=False, image=None, is_center=False, is_predict=False) -> None:
         self.is_auto = is_auto
         self.image = image
+        self.is_center = is_center
+        self.is_predict = is_predict
 
     def make_turn(self, field):
         if not self.is_auto:
@@ -118,8 +130,24 @@ class Player:
                 if not isinstance(field.cells[i], int):
                     continue
                 empty_cells.append(i)
+            if self.is_center and 4 in empty_cells:
+                field.cells[4] = self.image
+                return
+            if self.is_predict:
+                for idx in empty_cells:
+                    '''
+                    сделать ход
+                    проверить победу
+                    если победа - закончить функцию
+                    если не побуда - отменить ход и взять след. индекс
+                    '''
+                    field.cells[idx] = self.image
+                    if .get_winner() == '':
+                        field.cells[idx] = idx + 1
+                        continue
+
             random_idx = choice(empty_cells)
             field.cells[random_idx] = self.image
 
 
-App()
+app = App()
