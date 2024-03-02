@@ -1,115 +1,184 @@
+import os
 import pygame
-import sys
+from random import choice, randint
 
-pygame.init()
+CELL_SIZE = 100
+CELL_BG = (255, 255, 255)
+SCREEN_BG = (0, 0, 0)
 
-WIDTH, HEIGHT = 300, 300
-LINE_WIDTH = 15
-BOARD_ROWS, BOARD_COLS = 3, 3
-SQUARE_SIZE = WIDTH // BOARD_COLS
-CIRCLE_RADIUS = SQUARE_SIZE // 3
-CROSS_WIDTH = 25
-SPACE = SQUARE_SIZE // 4
-RED = (255, 0, 0)
-BG_COLOR = (28, 170, 156)
-LINE_COLOR = (23, 145, 135)
-CIRCLE_COLOR = (239, 231, 200)
-CROSS_COLOR = (66, 66, 66)
 
-# Создание экрана
-screen = pygame.display.set_mode((WIDTH, HEIGHT))
-pygame.display.set_caption("Крестики-нолики")
-screen.fill(BG_COLOR)
+class Game:
+    def __init__(self, screen, is_silent=False) -> None:
+        self.game = 1
+        self.player_1 = Player(image='x', is_auto=False)
+        self.player_2 = Player(image='o', is_auto=False, is_center=True, is_predict=True)
+        self.field = Field(screen)
+        self.winner = None
+        self.is_silent = is_silent
+        self.screen = screen
 
-# Создание игровой доски
-board = [['' for _ in range(BOARD_COLS)] for _ in range(BOARD_ROWS)]
+    def get_winner(self) -> str:
+        #  горизонтали
+        for i in range(0, 7, 3):
+            if self.field.cells[i] == self.field.cells[i+1] == self.field.cells[i+2]:
+                return self.field.cells[i]
+        #  вертикали
+        for i in range(3):
+            if self.field.cells[i] == self.field.cells[i+3] == self.field.cells[i+6]:
+                return self.field.cells[i]
+        #  диагонали
+        if self.field.cells[0] == self.field.cells[4] == self.field.cells[8]:
+            return self.field.cells[0]
+        if self.field.cells[2] == self.field.cells[4] == self.field.cells[6]:
+            return self.field.cells[2]
 
-# Рисование сетки
-def draw_grid():
-    for i in range(1, BOARD_ROWS):
-        pygame.draw.line(screen, LINE_COLOR, (0, i * SQUARE_SIZE), (WIDTH, i * SQUARE_SIZE), LINE_WIDTH)
-        pygame.draw.line(screen, LINE_COLOR, (i * SQUARE_SIZE, 0), (i * SQUARE_SIZE, HEIGHT), LINE_WIDTH)
+        return ''
 
-# Рисование фигур на доске
-def draw_figures():
-    for row in range(BOARD_ROWS):
-        for col in range(BOARD_COLS):
-            if board[row][col] == 'X':
-                pygame.draw.line(screen, CROSS_COLOR, (col * SQUARE_SIZE + SPACE, row * SQUARE_SIZE + SQUARE_SIZE - SPACE),
-                                 (col * SQUARE_SIZE + SQUARE_SIZE - SPACE, row * SQUARE_SIZE + SPACE), CROSS_WIDTH)
-                pygame.draw.line(screen, CROSS_COLOR, (col * SQUARE_SIZE + SPACE, row * SQUARE_SIZE + SPACE),
-                                 (col * SQUARE_SIZE + SQUARE_SIZE - SPACE, row * SQUARE_SIZE + SQUARE_SIZE - SPACE), CROSS_WIDTH)
-            elif board[row][col] == 'O':
-                pygame.draw.circle(screen, CIRCLE_COLOR, (col * SQUARE_SIZE + SQUARE_SIZE // 2, row * SQUARE_SIZE + SQUARE_SIZE // 2), CIRCLE_RADIUS, 2)
+    def run(self):  # счеттик ходов, на 10 выход
+        turn = 0
+        self.screen.fill((0, 0, 0))
+        self.field.draw()
+        while self.game:
 
-# Проверка победителя
-def check_winner():
-    # Проверка строк
-    for row in range(BOARD_ROWS):
-        if board[row][0] == board[row][1] == board[row][2] != '':
-            return board[row][0]
+            for event in pygame.event.get():
+                if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_ESCAPE:
+                        self.game = 0
 
-    # Проверка столбцов
-    for col in range(BOARD_COLS):
-        if board[0][col] == board[1][col] == board[2][col] != '':
-            return board[0][col]
+            '''
+            if not self.is_silent:
+                self.field.draw()
+            if turn > 8:
+                if not self.is_silent:
+                    print('игра окончена - ничья')
+                    self.game == 0
+                break
+            elif turn % 2:
+                self.player_2.make_turn(self.field)
+            else:
+                self.player_1.make_turn(self.field)
+            turn += 1
 
-    # Проверка диагоналей
-    if board[0][0] == board[1][1] == board[2][2] != '':
-        return board[0][0]
-    if board[0][2] == board[1][1] == board[2][0] != '':
-        return board[0][2]
+            self.winner = self.get_winner()
+            if self.winner:
+                if not self.is_silent:
+                    self.field.draw()
+                    print(f'{self.winner} победил')
+                self.game = 0
+            '''
+            pygame.display.flip()
+        pygame.quit()
+        #  self.restart()
 
-    return None
+    def restart(self):
+        print()
+        print('начать новую игру?')
+        while True:
+            choice = input()
+            if choice == 'да':
+                self.game = 1
+                App()
+            elif choice == 'нет':
+                exit()
+            os.system('cls')
+            print('введите "да" или "нет"')
 
-# Отрисовка доски
-def draw_board():
-    draw_grid()
-    draw_figures()
 
-# Очистка доски и экрана
-def reset_game():
-    screen.fill(BG_COLOR)
-    draw_board()
-    pygame.display.update()
-    for row in range(BOARD_ROWS):
-        for col in range(BOARD_COLS):
-            board[row][col] = ''
+class Field:
+    def __init__(self, screen) -> None:
+        self.cells = [i for i in range(1, 9)]
+        self.empty_cells = []
+        self.screen = screen
 
-# Основной игровой цикл
-def main():
-    draw_board()
-    running = True
-    currentPlayer = 'X'
-    game_over = False
-    while running:
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                running = False
-                pygame.quit()
-                sys.exit()
-            if event.type == pygame.MOUSEBUTTONDOWN and not game_over:
-                mouseX = event.pos[0]
-                mouseY = event.pos[1]
+    def draw(self):
+        x0 = 0
+        y0 = 0
+        for i in self.cells:
+            pygame.draw.rect(self.screen, (randint(0, 255), randint(0, 255), randint(0, 255)), pygame.Rect(
+                (x0 + CELL_SIZE * i) % 300, (y0 + i // 3) * CELL_SIZE, x0 + CELL_SIZE, y0 + CELL_SIZE
+                ))
 
-                clicked_row = mouseY // SQUARE_SIZE
-                clicked_col = mouseX // SQUARE_SIZE
+        '''
+        os.system('cls')
+        for i in range(0, 9, 3):
+            print(self.cells[i], self.cells[i + 1], self.cells[i + 2])
+        '''
+    def get_empty_cells(self):
+        for cell in self.cells:
+            if not isinstance(cell, int):
+                continue
+            self.empty_cells.append(cell)
 
-                if board[clicked_row][clicked_col] == '':
-                    board[clicked_row][clicked_col] = currentPlayer
-                    if currentPlayer == 'X':
-                        currentPlayer = 'O'
-                    else:
-                        currentPlayer = 'X'
-                    draw_board()
-                    winner = check_winner()
-                    if winner:
-                        game_over = True
-            if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_r:
-                    reset_game()
 
-        pygame.display.update()
+class App:
+    def __init__(self) -> None:
+        pygame.init()
+        self.screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
+        game = Game(self.screen, is_silent=False)
+        game.run()
+        '''
+        self.stat = [0, 0, 0]  # x o ничья
+        for i in range(1000):
+            self.game = Game(is_silent=True)
+            self.game.run()
 
-if __name__ == "__main__":
-    main()
+            if self.game.winner == 'x':
+                self.stat[0] += 1
+            elif self.game.winner == 'o':
+                self.stat[1] += 1
+            else:
+                self.stat[2] += 1
+        print(*self.stat)
+        '''
+
+class Player:
+    def __init__(self, is_auto=False, image=None, is_center=False, is_predict=False) -> None:
+        self.is_auto = is_auto
+        self.image = image
+        self.is_center = is_center
+        self.is_predict = is_predict
+
+    def make_turn(self, field):
+        if not self.is_auto:
+            while True:
+                try:
+                    cell_number = int(input(f'номер клетки для хода {self.image}: '))
+                except ValueError:
+                    print('номер клетки должен быть целым положительным числом')
+                    continue
+                if cell_number > 9 or cell_number < 1:
+                    print('номер клетки должен быть целым числом от 1 до 9')
+                    continue
+                idx = cell_number - 1
+                if not isinstance(field.cells[idx], int):
+                    print('выберите номер пустой клетки')
+                break
+            field.cells[cell_number - 1] = self.image
+
+        else:
+            empty_cells = []
+            for i in range(9):
+                if not isinstance(field.cells[i], int):
+                    continue
+                empty_cells.append(i)
+            if self.is_center and 4 in empty_cells:
+                field.cells[4] = self.image
+                return
+            if self.is_predict:
+                for idx in empty_cells:
+                    '''
+                    сделать ход
+                    проверить победу
+                    если победа - закончить функцию
+                    если не побуда - отменить ход и взять след. индекс
+                    '''
+                    field.cells[idx] = self.image
+                    if Game.get_winner() == '':
+                        field.cells[idx] = idx + 1
+                        continue
+
+            random_idx = choice(empty_cells)
+            field.cells[random_idx] = self.image
+
+
+app = App()
