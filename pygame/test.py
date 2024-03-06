@@ -16,6 +16,9 @@ class Game:
         self.winner = None
         self.is_silent = is_silent
         self.screen = screen
+        screen_width, screen_height = screen.get_size()
+        self.shift_x = (screen_width - 3 * CELL_SIZE) // 2
+        self.shift_y = (screen_height - 3 * CELL_SIZE) // 2
 
     def get_winner(self) -> str:
         #  горизонтали
@@ -35,15 +38,20 @@ class Game:
         return ''
 
     def run(self):  # счеттик ходов, на 10 выход
-        turn = 0
         self.screen.fill((0, 0, 0))
-        self.field.draw()
+        self.field.draw(self.shift_x, self.shift_y)
         while self.game:
-
             for event in pygame.event.get():
                 if event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_ESCAPE:
                         self.game = 0
+                if event.type == pygame.MOUSEBUTTONUP:
+                    x, y = pygame.mouse.get_pos()
+                    idx_x = x // CELL_SIZE
+                    idx_y = y // CELL_SIZE
+                    print(idx_x, idx_y)
+                    idx = self.field.cols * idx_y + idx_x
+                    print(idx)
 
             '''
             if not self.is_silent:
@@ -89,14 +97,20 @@ class Field:
         self.cells = [i for i in range(1, 9)]
         self.empty_cells = []
         self.screen = screen
+        self.rows = 3
+        self.cols = 3
+        self.width = CELL_SIZE * 3
+        self.heigth = CELL_SIZE * 3
 
-    def draw(self):
+    def draw(self, shift_x, shift_y):
         x0 = 0
         y0 = 0
         for i in self.cells:
-            pygame.draw.rect(self.screen, (randint(0, 255), randint(0, 255), randint(0, 255)), pygame.Rect(
-                (x0 + CELL_SIZE * i) % 300, (y0 + i // 3) * CELL_SIZE, x0 + CELL_SIZE, y0 + CELL_SIZE
-                ))
+            pygame.draw.rect(self.screen,
+                             (randint(0, 255), randint(0, 255), randint(0, 255)),
+                             pygame.Rect(
+                                        (x0 + CELL_SIZE * i) % 300 + shift_x, (y0 + i // 3) * CELL_SIZE + shift_y, CELL_SIZE, CELL_SIZE
+                                        ))
 
         '''
         os.system('cls')
